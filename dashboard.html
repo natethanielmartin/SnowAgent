@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aimless Agent</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --win-gray: #c0c0c0;
+            --win-dark-gray: #808080;
+            --win-black: #000000;
+            --win-white: #ffffff;
+            --win-blue: #000080;
+            --win-bg: #008080;
+            /* Teal */
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Tahoma', 'Verdana', sans-serif;
+            font-size: 11px;
+            background-color: var(--win-bg);
+            color: black;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+            -webkit-font-smoothing: none;
+        }
+
+        /* SCROLLBARS */
+        ::-webkit-scrollbar {
+            width: 16px;
+            background: var(--win-gray);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--win-gray);
+            border-top: 1px solid white;
+            border-left: 1px solid white;
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+            box-shadow: 1px 1px 0 #808080 inset;
+        }
+
+        ::-webkit-scrollbar-button {
+            background: var(--win-gray);
+            border-top: 1px solid white;
+            border-left: 1px solid white;
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+            height: 16px;
+        }
+
+        /* CLASSIC BORDERS */
+        .win-border-outset {
+            border-top: 1px solid white;
+            border-left: 1px solid white;
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+            box-shadow: 1px 1px 0 #808080, -1px -1px 0 #dfdfdf inset;
+            background: var(--win-gray);
+        }
+
+        .win-border-inset {
+            border-top: 1px solid #808080;
+            border-left: 1px solid #808080;
+            border-right: 1px solid white;
+            border-bottom: 1px solid white;
+            box-shadow: 1px 1px 0 white, -1px -1px 0 black inset;
+            background: white;
+        }
+
+        .container-wrapper {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            padding: 4px;
+        }
+
+        /* SIDEBAR -> LEFT PANEL */
+        .sidebar {
+            width: 200px;
+            background: var(--win-gray);
+            display: flex;
+            flex-direction: column;
+            padding: 4px;
+            margin-right: 4px;
+            border-top: 1px solid white;
+            border-left: 1px solid white;
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+            box-shadow: 1px 1px 0 #808080;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 14px;
+            margin-bottom: 10px;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* SIDEBAR BUTTONS */
+        .nav-item {
+            padding: 6px 8px;
+            margin-bottom: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid transparent;
+        }
+
+        .nav-item:hover {
+            border: 1px solid white;
+            box-shadow: -1px -1px 0 black;
+        }
+
+        .nav-item.active {
+            background: var(--win-blue);
+            color: white;
+            border: 1px dotted white;
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            flex: 1;
+            background: var(--win-gray);
+            border-top: 1px solid white;
+            border-left: 1px solid white;
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+            box-shadow: 1px 1px 0 #808080;
+            display: flex;
+            flex-direction: column;
+            padding: 2px;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 4px 8px;
+            margin-bottom: 4px;
+            background: linear-gradient(90deg, #000080, #1084d0);
+            color: white;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .view-section {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* CARDS -> WINDOWS */
+        .card {
+            background: var(--win-gray);
+            border-top: 1px solid white;
+            border-left: 1px solid white;
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+            box-shadow: 1px 1px 0 #808080;
+            padding: 2px;
+            margin-bottom: 10px;
+        }
+
+        .card-header {
+            background: linear-gradient(90deg, #000080, #1084d0);
+            color: white;
+            padding: 2px 4px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin: 10px 0;
+            font-size: 1.5em;
+            padding: 0 10px;
+        }
+
+        p {
+            margin: 5px 0;
+            padding: 0 10px;
+        }
+
+        /* BUTTONS */
+        button {
+            background: var(--win-gray);
+            border-top: 1px solid white;
+            border-left: 1px solid white;
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+            box-shadow: 1px 1px 0 #808080;
+            padding: 4px 12px;
+            cursor: pointer;
+            font-family: 'Tahoma', sans-serif;
+            font-size: 11px;
+            color: black;
+            min-width: 75px;
+        }
+
+        button:active {
+            border-top: 1px solid black;
+            border-left: 1px solid black;
+            border-right: 1px solid white;
+            border-bottom: 1px solid white;
+            box-shadow: none;
+            transform: translate(1px, 1px);
+        }
+
+        input {
+            border-top: 1px solid #808080;
+            border-left: 1px solid #808080;
+            border-right: 1px solid white;
+            border-bottom: 1px solid white;
+            box-shadow: 1px 1px 0 white, -1px -1px 0 black inset;
+            padding: 4px;
+            font-family: 'Tahoma', sans-serif;
+            background: white;
+        }
+
+        /* CHAT */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 400px;
+            border-top: 1px solid white;
+            border-left: 1px solid white;
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+            box-shadow: 1px 1px 0 #808080;
+            background: var(--win-gray);
+            padding: 2px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            background: white;
+            border-top: 1px solid #808080;
+            border-left: 1px solid #808080;
+            border-right: 1px solid white;
+            border-bottom: 1px solid white;
+            box-shadow: -1px -1px 0 black inset;
+            padding: 10px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            /* Terminal feel for chat */
+        }
+
+        .chat-input-area {
+            display: flex;
+            gap: 5px;
+            padding: 5px;
+            border-top: 1px solid white;
+        }
+
+        .chat-input-area input {
+            flex: 1;
+        }
+
+        /* Loader */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px;
+            background: var(--card);
+            border-radius: 12px;
+            width: fit-content;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+
+        .dot:nth-child(1) {
+            animation-delay: -0.32s;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: -0.16s;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            80%,
+            100% {
+                transform: scale(0);
+            }
+
+            40% {
+                transform: scale(1);
+            }
+        }
+
+        pre {
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin-top: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="logo">
+            <i class="fa-solid fa-bullseye"></i>
+            <span>Aimless Agent</span>
+        </div>
+
+        <div class="nav-item active" onclick="switchTab('study')">
+            <i class="fa-solid fa-graduation-cap"></i>
+            Study Buddy
+        </div>
+        <div class="nav-item" onclick="switchTab('admin')">
+            <i class="fa-solid fa-screwdriver-wrench"></i>
+            Admin Console
+        </div>
+        <div class="nav-item" onclick="switchTab('stats')">
+            <i class="fa-solid fa-chart-pie"></i>
+            Instance Stats
+        </div>
+        <div class="nav-item" onclick="switchTab('senior')">
+            <i class="fa-solid fa-user-secret"></i>
+            Senior Admin
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div class="main-content">
+
+        <!-- HEADER -->
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h1 id="page-title">Study Buddy</h1>
+                    <p class="subtitle" id="page-subtitle">Master ServiceNow concepts with AI-powered quizzes.</p>
+                </div>
+                <div class="status-badge online">
+                    <i class="fa-solid fa-circle" style="font-size: 8px; margin-right: 5px;"></i> System Online
+                </div>
+            </div>
+        </header>
+
+        <!-- STUDY BUDDY VIEW -->
+        <div id="view-study" class="view-section">
+            <div class="grid">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Current Topic</span>
+                        <i class="fa-solid fa-book" style="color: var(--primary);"></i>
+                    </div>
+                    <h2 id="current-topic-display">None Selected</h2>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Session Status</span>
+                        <i class="fa-solid fa-chart-line" style="color: var(--secondary);"></i>
+                    </div>
+                    <h2 id="session-status">Idle</h2>
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-messages" id="study-chat">
+                    <div class="message ai">
+                        Hello! I am your ServiceNow Study Buddy. What topic would you like to learn about today? (e.g.,
+                        "Business Rules", "ACLs")
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="study-input" placeholder="Type your topic or answer..."
+                        onkeypress="handleStudyEnter(event)">
+                    <button onclick="handleStudySubmit()" id="study-btn"><i
+                            class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ADMIN CONSOLE VIEW -->
+        <div id="view-admin" class="view-section hidden">
+            <div class="grid">
+                <div class="card" style="grid-column: span 2;">
+                    <div class="card-header">
+                        <span class="card-title">System Administrator Agent</span>
+                        <i class="fa-solid fa-shield-halved" style="color: var(--danger);"></i>
+                    </div>
+                    <p style="color: var(--text-muted); margin-bottom: 10px;">
+                        WARNING: This agent has <strong>Write Access</strong> to your instance. It can create, update,
+                        and delete records.
+                    </p>
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-messages" id="admin-chat">
+                    <div class="message ai">
+                        <i class="fa-solid fa-terminal"></i> &nbsp; <strong>Admin Agent Ready.</strong><br><br>
+                        I can help you manage your instance. Try commands like:<br>
+                        - "Find the user with email admin@example.com"<br>
+                        - "Create a P1 incident for Server Outage"<br>
+                        - "List the last 5 Business Rules"
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <input type="text" id="admin-input" placeholder="Enter admin command..."
+                        onkeypress="handleAdminEnter(event)">
+                    <button onclick="handleAdminSubmit()" id="admin-btn" style="background: var(--danger);"><i
+                            class="fa-solid fa-bolt"></i> Execute</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATS VIEW -->
+        <div id="view-stats" class="view-section hidden">
+            <div class="grid">
+                <!-- Row 1: Health -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Critical Incidents (P1)</span>
+                        <i class="fa-solid fa-fire" style="color: #ef4444;"></i>
+                    </div>
+                    <h2 id="stat-p1">...</h2>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Unassigned Incidents</span>
+                        <i class="fa-solid fa-inbox" style="color: #f59e0b;"></i>
+                    </div>
+                    <h2 id="stat-unassigned">...</h2>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Active Changes</span>
+                        <i class="fa-solid fa-code-branch" style="color: #8b5cf6;"></i>
+                    </div>
+                    <h2 id="stat-changes">...</h2>
+                </div>
+
+                <!-- Row 2: General -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Total Active Incidents</span>
+                        <i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i>
+                    </div>
+                    <h2 id="stat-incidents">...</h2>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Active Users</span>
+                        <i class="fa-solid fa-users" style="color: #3b82f6;"></i>
+                    </div>
+                    <h2 id="stat-users">...</h2>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Failed Jobs</span>
+                        <i class="fa-solid fa-bug" style="color: #f59e0b;"></i>
+                    </div>
+                    <h2 id="stat-jobs">...</h2>
+                </div>
+
+                <!-- Row 3: Learning & Dev -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Errors (Today)</span>
+                        <i class="fa-solid fa-circle-xmark" style="color: #fca5a5;"></i>
+                    </div>
+                    <h2 id="today-errors">...</h2>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Dev Updates (Today)</span>
+                        <i class="fa-solid fa-code-commit" style="color: #6ee7b7;"></i>
+                    </div>
+                    <h2 id="today-updates">...</h2>
+                </div>
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Active Business Rules</span>
+                        <i class="fa-solid fa-gears" style="color: #c4b5fd;"></i>
+                    </div>
+                    <h2 id="total-brs">...</h2>
+                </div>
+            </div>
+            <div class="card" style="margin-top: 1.5rem;">
+                <div class="card-header">
+                    <span class="card-title">Instance Health</span>
+                </div>
+                <p>Data fetched live from <span style="font-family: monospace;">dev309858.service-now.com</span> via
+                    Aggregate API.</p>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <button onclick="updateStats(); updateErrors();" style="background: #334155; width: auto;"><i
+                            class="fa-solid fa-rotate-right"></i> Refresh</button>
+                </div>
+            </div>
+
+            <!-- ERRORS LIST -->
+            <div class="card" style="margin-top: 1.5rem;">
+                <div class="card-header">
+                    <span class="card-title">Recent Errors (syslog)</span>
+                    <i class="fa-solid fa-triangle-exclamation" style="color: var(--danger);"></i>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                        <thead>
+                            <tr style="text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                                <th style="padding: 10px; color: var(--text-muted); width: 150px;">Time</th>
+                                <th style="padding: 10px; color: var(--text-muted); width: 150px;">Source</th>
+                                <th style="padding: 10px; color: var(--text-muted);">Message</th>
+                                <th style="padding: 10px; color: var(--text-muted); width: 100px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="errors-list">
+                            <tr>
+                                <td colspan="4" style="padding: 20px; text-align: center;">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- SENIOR ADMIN VIEW -->
+        <div id="view-senior" class="view-section hidden">
+            <!-- Security Section -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <span class="card-title">Security Watch (Today)</span>
+                    <i class="fa-solid fa-lock" style="color: var(--danger);"></i>
+                </div>
+                <div class="grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0;">
+                    <div>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Failed Logins</p>
+                        <h2 id="sec-failed-logins" style="color: #ef4444;">...</h2>
+                    </div>
+                    <div>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">New Admin Grants</p>
+                        <h2 id="sec-new-admins" style="color: #f59e0b;">...</h2>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Integrations Section -->
+            <div class="card" style="margin-bottom: 1.5rem;">
+                <div class="card-header">
+                    <span class="card-title">Integrations Health (ECC Queue)</span>
+                    <i class="fa-solid fa-network-wired" style="color: var(--primary);"></i>
+                </div>
+                <div class="grid" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 0;">
+                    <div>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">ECC Errors (Today)</p>
+                        <h2 id="int-ecc-errors" style="color: #ef4444;">...</h2>
+                    </div>
+                    <div>
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Status</p>
+                        <h2 id="int-status" style="font-size: 1.2rem; margin-top: 5px;">Checking...</h2>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="updateSeniorStats()" style="background: #334155;"><i class="fa-solid fa-rotate-right"></i>
+                Refresh Data</button>
+        </div>
+
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:5000";
+
+        // STATE
+        let studyState = 'TOPIC'; // TOPIC, ANSWER
+        let currentTopic = '';
+        let currentQuestion = '';
+        let adminHistory = []; // Stores {role: 'user'|'ai', content: '...'}
+
+        function switchTab(tab) {
+            // Update Sidebar
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            // Update View
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+
+            // Update Header
+            if (tab === 'study') {
+                document.getElementById('page-title').innerText = "Study Buddy";
+                document.getElementById('page-subtitle').innerText = "Master ServiceNow concepts with AI-powered quizzes.";
+            } else if (tab === 'admin') {
+                document.getElementById('page-title').innerText = "Admin Console";
+                document.getElementById('page-subtitle').innerText = "Execute natural language commands on your instance.";
+            } else if (tab === 'stats') {
+                document.getElementById('page-title').innerText = "Instance Statistics";
+                document.getElementById('page-subtitle').innerText = "Real-time metrics from your ServiceNow instance.";
+                updateStats();
+                updateErrors();
+            } else if (tab === 'senior') {
+                document.getElementById('page-title').innerText = "Senior Admin View";
+                document.getElementById('page-subtitle').innerText = "Security & Integration Health Monitoring.";
+                updateSeniorStats();
+            }
+        }
+
+        async function updateSeniorStats() {
+            document.getElementById('sec-failed-logins').innerText = "...";
+            document.getElementById('sec-new-admins').innerText = "...";
+            document.getElementById('int-ecc-errors').innerText = "...";
+            document.getElementById('int-status').innerText = "Checking...";
+
+            try {
+                // Fetch Security Stats
+                const secRes = await fetch(`${API_URL}/security_stats`);
+                const secData = await secRes.json();
+                if (secData.error) throw new Error(secData.error);
+
+                document.getElementById('sec-failed-logins').innerText = secData.failed_logins;
+                document.getElementById('sec-new-admins').innerText = secData.new_admins;
+
+                // Fetch Integration Stats
+                const intRes = await fetch(`${API_URL}/integration_stats`);
+                const intData = await intRes.json();
+                if (intData.error) throw new Error(intData.error);
+
+                document.getElementById('int-ecc-errors').innerText = intData.ecc_errors;
+
+                // Logic for status
+                if (intData.ecc_errors > 0) {
+                    document.getElementById('int-status').innerHTML = '<span style="color: #ef4444;">Issues Detected</span>';
+                } else {
+                    document.getElementById('int-status').innerHTML = '<span style="color: var(--success);">Healthy</span>';
+                }
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById('sec-failed-logins').innerText = "Err";
+                document.getElementById('sec-new-admins').innerText = "Err";
+                document.getElementById('int-ecc-errors').innerText = "Err";
+            }
+        }
+
+        async function updateErrors() {
+            const tbody = document.getElementById('errors-list');
+            tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">Loading...</td></tr>';
+
+            try {
+                const res = await fetch(`${API_URL}/errors`);
+                const errors = await res.json();
+
+                if (errors.error) throw new Error(errors.error);
+
+                if (errors.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">No recent errors found.</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = errors.map((err, i) => `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="padding: 10px; font-size: 0.85rem; color: var(--text-muted);">${err.sys_created_on}</td>
+                        <td style="padding: 10px; font-size: 0.85rem; color: var(--secondary);">${err.source}</td>
+                        <td style="padding: 10px; font-family: monospace; font-size: 0.8rem; word-break: break-all;">${err.message.substring(0, 100)}${err.message.length > 100 ? '...' : ''}</td>
+                        <td style="padding: 10px;">
+                            <button onclick="analyzeError(this, '${err.message.replace(/'/g, "\\'")}')" style="padding: 4px 8px; font-size: 0.75rem; background: var(--primary);">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> Analyze
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+            } catch (e) {
+                console.error(e);
+                tbody.innerHTML = `<tr><td colspan="4" style="padding: 20px; text-align: center; color: var(--danger);">Error loading logs: ${e.message}</td></tr>`;
+            }
+        }
+
+        async function analyzeError(btn, message) {
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`${API_URL}/analyze_error`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+
+                // For now, specialized alert. In product, a modal would be better.
+                alert("AI Analysis:\n\n" + data.analysis);
+
+            } catch (e) {
+                alert("Analysis failed: " + e.message);
+            }
+
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        }
+
+        async function updateStats() {
+            const ids = ['stat-incidents', 'stat-users', 'stat-jobs', 'stat-p1', 'stat-unassigned', 'stat-changes', 'today-errors', 'today-updates', 'total-brs'];
+            ids.forEach(id => document.getElementById(id).innerText = "...");
+
+            try {
+                const res = await fetch(`${API_URL}/instance_stats`);
+                const data = await res.json();
+
+                if (data.error) throw new Error(data.error);
+
+                document.getElementById('stat-incidents').innerText = data.incidents;
+                document.getElementById('stat-users').innerText = data.users;
+                document.getElementById('stat-jobs').innerText = data.failed_jobs;
+
+                document.getElementById('stat-p1').innerText = data.p1_incidents;
+                document.getElementById('stat-unassigned').innerText = data.unassigned_incidents;
+                document.getElementById('stat-changes').innerText = data.active_changes;
+
+                document.getElementById('today-errors').innerText = data.today_errors;
+                document.getElementById('today-updates').innerText = data.recent_updates;
+                document.getElementById('total-brs').innerText = data.total_business_rules;
+
+            } catch (e) {
+                console.error(e);
+                ids.forEach(id => document.getElementById(id).innerText = "Err");
+            }
+        }
+
+        // --- STUDY BUDDY LOGIC ---
+
+        function handleStudyEnter(e) { if (e.key === 'Enter') handleStudySubmit(); }
+
+        async function handleStudySubmit() {
+            const input = document.getElementById('study-input');
+            const btn = document.getElementById('study-btn');
+            const text = input.value.trim();
+            if (!text) return;
+
+            // Add User Message
+            addMessage('study-chat', text, 'user');
+            input.value = '';
+            input.disabled = true;
+            btn.disabled = true;
+            showTyping('study-chat');
+
+            try {
+                if (studyState === 'TOPIC') {
+                    currentTopic = text;
+                    document.getElementById('current-topic-display').innerText = currentTopic;
+                    document.getElementById('session-status').innerText = "Researching...";
+
+                    const res = await fetch(`${API_URL}/start_interview`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ topic: currentTopic })
+                    });
+                    const data = await res.json();
+
+                    removeTyping('study-chat');
+                    if (data.error) throw new Error(data.error);
+
+                    currentQuestion = data.question;
+                    addMessage('study-chat', currentQuestion, 'ai');
+                    studyState = 'ANSWER';
+                    document.getElementById('session-status').innerText = "Waiting for Answer";
+
+                } else if (studyState === 'ANSWER') {
+                    document.getElementById('session-status').innerText = "Grading...";
+
+                    const res = await fetch(`${API_URL}/submit_answer`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            topic: currentTopic,
+                            question: currentQuestion,
+                            answer: text
+                        })
+                    });
+                    const data = await res.json();
+
+                    removeTyping('study-chat');
+                    if (data.error) throw new Error(data.error);
+
+                    addMessage('study-chat', data.grade, 'ai');
+
+                    // Reset for next round
+                    addMessage('study-chat', "Great job! Enter a new topic to start again.", 'ai');
+                    studyState = 'TOPIC';
+                    document.getElementById('session-status').innerText = "Idle";
+                }
+            } catch (e) {
+                removeTyping('study-chat');
+                addMessage('study-chat', "Error: " + e.message, 'ai');
+                studyState = 'TOPIC';
+            }
+
+            input.disabled = false;
+            btn.disabled = false;
+            input.focus();
+        }
+
+        // --- ADMIN LOGIC ---
+
+        function handleAdminEnter(e) { if (e.key === 'Enter') handleAdminSubmit(); }
+
+        async function handleAdminSubmit() {
+            const input = document.getElementById('admin-input');
+            const btn = document.getElementById('admin-btn');
+            const text = input.value.trim();
+            if (!text) return;
+
+            addMessage('admin-chat', text, 'user');
+            adminHistory.push({ role: 'user', content: text }); // Add to history
+
+            input.value = '';
+            input.disabled = true;
+            btn.disabled = true;
+            showTyping('admin-chat');
+
+            try {
+                const res = await fetch(`${API_URL}/admin_command`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        command: text,
+                        history: adminHistory // Send history
+                    })
+                });
+                const data = await res.json();
+
+                removeTyping('admin-chat');
+                if (data.error) throw new Error(data.error);
+
+                // Format output nicely
+                let output = data.result;
+
+                // Add AI response to history
+                adminHistory.push({ role: 'ai', content: output });
+
+                // If it looks like JSON, wrap in pre tags
+                if (output.trim().startsWith('{') || output.trim().startsWith('[')) {
+                    output = `<pre>${output}</pre>`;
+                } else {
+                    output = output.replace(/\n/g, '<br>');
+                }
+
+                addMessage('admin-chat', output, 'ai');
+
+            } catch (e) {
+                removeTyping('admin-chat');
+                addMessage('admin-chat', "Error: " + e.message, 'ai');
+            }
+
+            input.disabled = false;
+            btn.disabled = false;
+            input.focus();
+        }
+
+        // --- UTILS ---
+
+        function addMessage(chatId, text, sender) {
+            const chat = document.getElementById(chatId);
+            const div = document.createElement('div');
+            div.className = `message ${sender}`;
+            div.innerHTML = text; // Allow HTML for formatting
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function showTyping(chatId) {
+            const chat = document.getElementById(chatId);
+            const div = document.createElement('div');
+            div.className = 'typing-indicator';
+            div.id = `typing-${chatId}`;
+            div.innerHTML = '<div class="dot"></div><div class="dot"></div><div class="dot"></div>';
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function removeTyping(chatId) {
+            const el = document.getElementById(`typing-${chatId}`);
+            if (el) el.remove();
+        }
+
+    </script>
+
+</body>
+
+</html>
