@@ -345,6 +345,87 @@
             font-family: 'Courier New', Courier, monospace;
             font-size: 0.9rem;
         }
+
+
+
+        /* MODAL */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-window {
+            background: var(--win-gray);
+            border-top: 1px solid white;
+            border-left: 1px solid white;
+            border-right: 1px solid black;
+            border-bottom: 1px solid black;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            background: linear-gradient(90deg, #000080, #1084d0);
+            color: white;
+            padding: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+        }
+
+        .modal-close-btn {
+            background: var(--win-gray);
+            border: 1px outset white;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: black;
+            cursor: pointer;
+            font-family: sans-serif;
+            font-size: 12px;
+        }
+
+        .modal-close-btn:active {
+            border: 1px inset white;
+        }
+
+        .modal-content {
+            padding: 10px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .record-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+
+        .record-table th {
+            text-align: left;
+            border-bottom: 1px solid #808080;
+            padding: 4px;
+        }
+
+        .record-table td {
+            padding: 4px;
+            border-bottom: 1px dotted #ccc;
+        }
     </style>
 </head>
 
@@ -372,17 +453,13 @@
             <div id="connection-status" style="margin-top: 5px; font-size: 10px; color: #fff; display: none;"></div>
         </div>
 
-        <div class="menu-item active" onclick="switchTab('study')" id="tab-study">
-            <i class="fa-solid fa-graduation-cap"></i>
-            Study Buddy
+        <div class="nav-item active" onclick="switchTab('stats')">
+            <i class="fa-solid fa-chart-pie"></i>
+            Instance Stats
         </div>
         <div class="nav-item" onclick="switchTab('admin')">
             <i class="fa-solid fa-screwdriver-wrench"></i>
             Admin Console
-        </div>
-        <div class="nav-item" onclick="switchTab('stats')">
-            <i class="fa-solid fa-chart-pie"></i>
-            Instance Stats
         </div>
         <div class="nav-item" onclick="switchTab('senior')">
             <i class="fa-solid fa-user-secret"></i>
@@ -397,8 +474,8 @@
         <header>
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <h1 id="page-title">Study Buddy</h1>
-                    <p class="subtitle" id="page-subtitle">Master ServiceNow concepts with AI-powered quizzes.</p>
+                    <h1 id="page-title">Instance Statistics</h1>
+                    <p class="subtitle" id="page-subtitle">Real-time metrics from your ServiceNow instance.</p>
                 </div>
                 <div class="status-badge" id="system-status-badge">
                     <i class="fa-solid fa-circle" style="font-size: 8px; margin-right: 5px;"
@@ -408,40 +485,7 @@
             </div>
         </header>
 
-        <!-- STUDY BUDDY VIEW -->
-        <div id="view-study" class="view-section">
-            <div class="grid">
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Current Topic</span>
-                        <i class="fa-solid fa-book" style="color: var(--primary);"></i>
-                    </div>
-                    <h2 id="current-topic-display">None Selected</h2>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Session Status</span>
-                        <i class="fa-solid fa-chart-line" style="color: var(--secondary);"></i>
-                    </div>
-                    <h2 id="session-status">Idle</h2>
-                </div>
-            </div>
 
-            <div class="chat-container">
-                <div class="chat-messages" id="study-chat">
-                    <div class="message ai">
-                        Hello! I am your ServiceNow Study Buddy. What topic would you like to learn about today? (e.g.,
-                        "Business Rules", "ACLs")
-                    </div>
-                </div>
-                <div class="chat-input-area">
-                    <input type="text" id="study-input" placeholder="Type your topic or answer..."
-                        onkeypress="handleStudyEnter(event)">
-                    <button onclick="handleStudySubmit()" id="study-btn"><i
-                            class="fa-solid fa-paper-plane"></i></button>
-                </div>
-            </div>
-        </div>
 
         <!-- ADMIN CONSOLE VIEW -->
         <div id="view-admin" class="view-section hidden">
@@ -478,7 +522,7 @@
         </div>
 
         <!-- STATS VIEW -->
-        <div id="view-stats" class="view-section hidden">
+        <div id="view-stats" class="view-section">
             <div class="grid">
                 <!-- Row 1: Health -->
                 <div class="card">
@@ -631,6 +675,19 @@
 
     </div>
 
+    <!-- MODAL POPUP -->
+    <div id="record-modal" class="modal-overlay">
+        <div class="modal-window">
+            <div class="modal-header">
+                <span id="modal-title">Record Details</span>
+                <button class="modal-close-btn" onclick="closeModal()">X</button>
+            </div>
+            <div class="modal-content">
+                <div id="modal-body">Loading...</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_URL = "http://localhost:5001";
 
@@ -639,9 +696,6 @@
         }
 
         // STATE
-        let studyState = 'TOPIC'; // TOPIC, ANSWER
-        let currentTopic = '';
-        let currentQuestion = '';
         let adminHistory = []; // Stores {role: 'user'|'ai', content: '...'}
 
         function switchTab(tab) {
@@ -654,10 +708,7 @@
             document.getElementById(`view-${tab}`).classList.remove('hidden');
 
             // Update Header
-            if (tab === 'study') {
-                document.getElementById('page-title').innerText = "Study Buddy";
-                document.getElementById('page-subtitle').innerText = "Master ServiceNow concepts with AI-powered quizzes.";
-            } else if (tab === 'admin') {
+            if (tab === 'admin') {
                 document.getElementById('page-title').innerText = "Admin Console";
                 document.getElementById('page-subtitle').innerText = "Execute natural language commands on your instance.";
             } else if (tab === 'stats') {
@@ -814,6 +865,30 @@
                 document.getElementById('today-updates').innerText = data.recent_updates;
                 document.getElementById('total-brs').innerText = data.total_business_rules;
 
+                // Add Interactivity
+                document.getElementById('stat-incidents').parentNode.onclick = () => fetchAndShowRecords('Active Incidents', 'incident', 'active=true', 'number,short_description,priority,state,assigned_to');
+                document.getElementById('stat-users').parentNode.onclick = () => fetchAndShowRecords('Active Users', 'sys_user', 'active=true', 'user_name,first_name,last_name,email');
+                document.getElementById('stat-jobs').parentNode.onclick = () => fetchAndShowRecords('Failed Jobs', 'sys_trigger', 'state=3', 'name,next_action,state,trigger_type');
+
+                document.getElementById('stat-p1').parentNode.onclick = () => fetchAndShowRecords('Critical Incidents', 'incident', 'active=true^priority=1', 'number,short_description,state,assigned_to');
+                document.getElementById('stat-unassigned').parentNode.onclick = () => fetchAndShowRecords('Unassigned Incidents', 'incident', 'active=true^assigned_toISEMPTY', 'number,short_description,priority,state');
+                document.getElementById('stat-changes').parentNode.onclick = () => fetchAndShowRecords('Active Changes', 'change_request', 'active=true', 'number,short_description,type,state,start_date');
+
+                document.getElementById('today-errors').parentNode.onclick = () => fetchAndShowRecords('Errors Today', 'syslog', 'level=2^sys_created_onONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()', 'sys_created_on,level,source,message');
+                document.getElementById('today-updates').parentNode.onclick = () => fetchAndShowRecords('Dev Updates Today', 'sys_update_xml', 'sys_created_onONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()', 'name,type,target_name,sys_updated_by,action');
+                document.getElementById('total-brs').parentNode.onclick = () => fetchAndShowRecords('Active Business Rules', 'sys_script', 'active=true', 'name,table,when,action_insert,action_update');
+
+                // Add cursor pointer to cards
+                ids.forEach(id => {
+                    const card = document.getElementById(id).parentNode;
+                    card.style.cursor = 'pointer';
+                    card.title = 'Click to view records';
+
+                    // Add hover effect via JS since we can't easily modify CSS for just these
+                    card.onmouseover = () => card.style.background = '#e0e0e0';
+                    card.onmouseout = () => card.style.background = 'var(--win-gray)';
+                });
+
             } catch (e) {
                 console.error(e);
 
@@ -823,6 +898,75 @@
 
                 ids.forEach(id => document.getElementById(id).innerText = "Err");
                 alert("Connection Error: " + e.message + "\n\nMake sure server.py is running on port 5001.");
+            }
+        }
+
+        // --- MODAL & INTERACTIVITY ---
+
+        function closeModal() {
+            document.getElementById('record-modal').style.display = 'none';
+        }
+
+        async function fetchAndShowRecords(title, table, query, fields) {
+            const modal = document.getElementById('record-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+
+            modalTitle.innerText = title;
+            modalBody.innerHTML = '<div style="text-align:center; padding: 20px;">Loading records...</div>';
+            modal.style.display = 'flex';
+
+            const iUrl = getInstanceUrl();
+            if (!iUrl) return;
+
+            try {
+                const res = await fetch(`${API_URL}/records`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        instance_url: iUrl,
+                        table: table,
+                        query: query,
+                        fields: fields,
+                        limit: 20
+                    })
+                });
+                const data = await res.json();
+
+                if (data.error) throw new Error(data.error);
+                if (!Array.isArray(data)) throw new Error("Invalid response format");
+
+                if (data.length === 0) {
+                    modalBody.innerHTML = '<div style="text-align:center; padding: 20px;">No records found.</div>';
+                    return;
+                }
+
+                // Dynamically build table
+                // If fields provided, use them. Else use keys from first obj (filtering generic ones)
+                const first = data[0];
+                const keys = fields ? fields.split(',') : Object.keys(first).filter(k => !k.startsWith('sys_') || k === 'sys_id');
+
+                let html = '<table class="record-table"><thead><tr>';
+                keys.forEach(k => html += `<th>${k}</th>`);
+                html += '</tr></thead><tbody>';
+
+                data.forEach(row => {
+                    html += '<tr>';
+                    keys.forEach(k => {
+                        let val = row[k];
+                        if (typeof val === 'object' && val !== null && val.display_value) val = val.display_value;
+                        else if (typeof val === 'object' && val !== null) val = JSON.stringify(val);
+                        html += `<td>${val || ''}</td>`;
+                    });
+                    html += '</tr>';
+                });
+                html += '</tbody></table>';
+
+                modalBody.innerHTML = html;
+
+            } catch (e) {
+                console.error(e);
+                modalBody.innerHTML = `<div style="color: red; padding: 20px;">Error: ${e.message}</div>`;
             }
         }
 
@@ -882,82 +1026,7 @@
             }
         }
 
-        // --- STUDY BUDDY LOGIC ---
 
-        function handleStudyEnter(e) { if (e.key === 'Enter') handleStudySubmit(); }
-
-        async function handleStudySubmit() {
-            const input = document.getElementById('study-input');
-            const btn = document.getElementById('study-btn');
-            const text = input.value.trim();
-            if (!text) return;
-
-            const iUrl = getInstanceUrl();
-            if (!iUrl) return;
-
-            // Add User Message
-            addMessage('study-chat', text, 'user');
-            input.value = '';
-            input.disabled = true;
-            btn.disabled = true;
-            showTyping('study-chat');
-
-            try {
-                if (studyState === 'TOPIC') {
-                    currentTopic = text;
-                    document.getElementById('current-topic-display').innerText = currentTopic;
-                    document.getElementById('session-status').innerText = "Researching...";
-
-                    const res = await fetch(`${API_URL}/start_interview`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ topic: currentTopic, instance_url: iUrl })
-                    });
-                    const data = await res.json();
-
-                    removeTyping('study-chat');
-                    if (data.error) throw new Error(data.error);
-
-                    currentQuestion = data.question;
-                    addMessage('study-chat', currentQuestion, 'ai');
-                    studyState = 'ANSWER';
-                    document.getElementById('session-status').innerText = "Waiting for Answer";
-
-                } else if (studyState === 'ANSWER') {
-                    document.getElementById('session-status').innerText = "Grading...";
-
-                    const res = await fetch(`${API_URL}/submit_answer`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            topic: currentTopic,
-                            question: currentQuestion,
-                            answer: text,
-                            instance_url: iUrl
-                        })
-                    });
-                    const data = await res.json();
-
-                    removeTyping('study-chat');
-                    if (data.error) throw new Error(data.error);
-
-                    addMessage('study-chat', data.grade, 'ai');
-
-                    // Reset for next round
-                    addMessage('study-chat', "Great job! Enter a new topic to start again.", 'ai');
-                    studyState = 'TOPIC';
-                    document.getElementById('session-status').innerText = "Idle";
-                }
-            } catch (e) {
-                removeTyping('study-chat');
-                addMessage('study-chat', "Error: " + e.message, 'ai');
-                studyState = 'TOPIC';
-            }
-
-            input.disabled = false;
-            btn.disabled = false;
-            input.focus();
-        }
 
         // --- ADMIN LOGIC ---
 
@@ -1042,6 +1111,10 @@
             if (el) el.remove();
         }
 
+        // Init
+        window.onload = function () {
+            switchTab('stats');
+        };
     </script>
 
 </body>

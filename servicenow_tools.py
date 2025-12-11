@@ -176,6 +176,33 @@ def get_integration_health(instance_url):
 
     return stats
 
+def get_records(instance_url, table, query, fields=None, limit=20):
+    """
+    Fetches a list of records from a table.
+    """
+    url = f"{instance_url}/api/now/table/{table}"
+    params = {
+        'sysparm_limit': limit,
+        'sysparm_query': query
+    }
+    if fields:
+        params['sysparm_fields'] = fields
+        
+    try:
+        response = requests.get(
+            url, 
+            auth=(USERNAME, PASSWORD), 
+            headers={"Content-Type": "application/json"}, 
+            params=params,
+            timeout=10
+        )
+        if response.status_code == 200:
+            return response.json().get('result', [])
+        else:
+            return {"error": f"Error {response.status_code}: {response.text}"}
+    except Exception as e:
+        return {"error": f"Connection Error: {str(e)}"}
+
 class ServiceNowQueryTool(BaseTool):
     name: str = "ServiceNow Table Query"
     description: str = "Queries any ServiceNow table. Useful for finding records (Users, Incidents, Scripts, etc). Input should be a pipe-separated string: 'table_name|query_string'. Example: 'sys_user|active=true^nameLIKEAlice'"

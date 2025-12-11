@@ -1,10 +1,19 @@
+import signal
+import sys
+
+# Windows compatibility fix for crewai
+if sys.platform == "win32":
+    # Mock missing signals on Windows
+    for sig in ['SIGHUP', 'SIGTSTP', 'SIGQUIT', 'SIGCONT', 'SIGUSR1', 'SIGUSR2', 'SIGPIPE', 'SIGALRM']:
+        if not hasattr(signal, sig):
+            setattr(signal, sig, 1)
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 
 load_dotenv()
-from study_buddy import get_question_crew, get_grading_crew
-from servicenow_tools import get_instance_stats, get_applications, get_recent_errors, get_security_stats, get_integration_health, check_connection
+from servicenow_tools import get_instance_stats, get_applications, get_recent_errors, get_security_stats, get_integration_health, check_connection, get_records
 from admin_agent import run_admin_command, analyze_error_log
 
 app = Flask(__name__)
@@ -55,37 +64,6 @@ def analyze_error():
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/start_interview', methods=['POST'])
-def start_interview():
-    data = request.json
-    topic = data.get('topic')
-    url = data.get('instance_url')
-    if not topic or not url:
-        return jsonify({"error": "Topic and Instance URL required"}), 400
-    
-    try:
-        # This runs the research and returns the question
-        question = get_question_crew(topic, url)
-        return jsonify({"question": question})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/submit_answer', methods=['POST'])
-def submit_answer():
-    data = request.json
-    topic = data.get('topic')
-    question = data.get('question')
-    answer = data.get('answer')
-    url = data.get('instance_url')
-    
-    if not all([topic, question, answer, url]):
-        return jsonify({"error": "Missing fields (topic, question, answer, instance_url)"}), 400
-        
-    try:
-        grade = get_grading_crew(topic, question, answer, url)
-        return jsonify({"grade": grade})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 @app.route('/admin_command', methods=['POST'])
 def admin_command():
@@ -135,6 +113,24 @@ def applications():
     try:
         apps = get_applications(url)
         return jsonify(apps)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/records', methods=['POST'])
+def records():
+    data = request.json
+    url = data.get('instance_url')
+    table = data.get('table')
+    query = data.get('query')
+    limit = data.get('limit', 20)
+    fields = data.get('fields')
+
+    if not url or not table or not query:
+        return jsonify({"error": "Instance URL, Table, and Query required"}), 400
+    
+    try:
+        records = get_records(url, table, query, fields, limit)
+        return jsonify(records)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
