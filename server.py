@@ -12,24 +12,30 @@ app = Flask(__name__)
 
 @app.route('/security_stats', methods=['GET'])
 def security_stats():
+    url = request.args.get('instance_url')
+    if not url: return jsonify({"error": "Instance URL required"}), 400
     try:
-        stats = get_security_stats()
+        stats = get_security_stats(url)
         return jsonify(stats)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/integration_stats', methods=['GET'])
 def integration_stats():
+    url = request.args.get('instance_url')
+    if not url: return jsonify({"error": "Instance URL required"}), 400
     try:
-        stats = get_integration_health()
+        stats = get_integration_health(url)
         return jsonify(stats)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/errors', methods=['GET'])
 def errors():
+    url = request.args.get('instance_url')
+    if not url: return jsonify({"error": "Instance URL required"}), 400
     try:
-        errs = get_recent_errors()
+        errs = get_recent_errors(url)
         return jsonify(errs)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -38,10 +44,11 @@ def errors():
 def analyze_error():
     data = request.json
     msg = data.get('message')
-    if not msg:
-        return jsonify({"error": "Message required"}), 400
+    url = data.get('instance_url')
+    if not msg or not url:
+        return jsonify({"error": "Message and Instance URL required"}), 400
     try:
-        analysis = analyze_error_log(msg)
+        analysis = analyze_error_log(msg, url)
         return jsonify({"analysis": analysis})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -51,12 +58,13 @@ CORS(app)
 def start_interview():
     data = request.json
     topic = data.get('topic')
-    if not topic:
-        return jsonify({"error": "Topic is required"}), 400
+    url = data.get('instance_url')
+    if not topic or not url:
+        return jsonify({"error": "Topic and Instance URL required"}), 400
     
     try:
         # This runs the research and returns the question
-        question = get_question_crew(topic)
+        question = get_question_crew(topic, url)
         return jsonify({"question": question})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -67,12 +75,13 @@ def submit_answer():
     topic = data.get('topic')
     question = data.get('question')
     answer = data.get('answer')
+    url = data.get('instance_url')
     
-    if not all([topic, question, answer]):
-        return jsonify({"error": "Missing fields"}), 400
+    if not all([topic, question, answer, url]):
+        return jsonify({"error": "Missing fields (topic, question, answer, instance_url)"}), 400
         
     try:
-        grade = get_grading_crew(topic, question, answer)
+        grade = get_grading_crew(topic, question, answer, url)
         return jsonify({"grade": grade})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -82,31 +91,36 @@ def admin_command():
     data = request.json
     command = data.get('command')
     history = data.get('history', []) # Get history from frontend
+    url = data.get('instance_url')
     
-    if not command:
-        return jsonify({"error": "Command is required"}), 400
+    if not command or not url:
+        return jsonify({"error": "Command and Instance URL required"}), 400
     
     try:
-        result = run_admin_command(command, history)
+        result = run_admin_command(command, url, history)
         return jsonify({"result": result})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/instance_stats', methods=['GET'])
 def instance_stats():
+    url = request.args.get('instance_url')
+    if not url: return jsonify({"error": "Instance URL required"}), 400
     try:
-        stats = get_instance_stats()
+        stats = get_instance_stats(url)
         return jsonify(stats)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/applications', methods=['GET'])
 def applications():
+    url = request.args.get('instance_url')
+    if not url: return jsonify({"error": "Instance URL required"}), 400
     try:
-        apps = get_applications()
+        apps = get_applications(url)
         return jsonify(apps)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(port=5000, debug=True)
+    app.run(port=5001, debug=True)

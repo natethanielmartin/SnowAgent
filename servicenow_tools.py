@@ -3,17 +3,19 @@ import json
 import os
 from dotenv import load_dotenv
 from crewai.tools import BaseTool
+from pydantic import Field
 
 load_dotenv()
 
 # --- CONFIGURATION ---
-INSTANCE_URL = "https://dev309858.service-now.com"
+# INSTANCE_URL is now dynamic for some functions, but still used globally by others.
+INSTANCE_URL = "https://dev309858.service-now.com" # Keeping for other functions that still rely on it.
 USERNAME = os.getenv("SN_USERNAME")
 PASSWORD = os.getenv("SN_PASSWORD") 
 
-def get_instance_stats():
+def get_instance_stats(instance_url):
     """
-    Fetches aggregate counts for the dashboard.
+    Fetches basic stats: incident count, active changes, open problems.
     Returns dict with keys: incidents, users, jobs
     """
     stats = {
@@ -27,9 +29,8 @@ def get_instance_stats():
     
     headers = {"Content-Type": "application/json"}
     
-    # helper for stats api
     def get_count(table, query):
-        url = f"{INSTANCE_URL}/api/now/stats/{table}"
+        url = f"{instance_url}/api/now/stats/{table}"
         params = {
             'sysparm_count': 'true',
             'sysparm_query': query
@@ -58,11 +59,11 @@ def get_instance_stats():
     
     return stats
 
-def get_applications():
+def get_applications(instance_url):
     """
     Fetches a list of applications from sys_scope.
     """
-    url = f"{INSTANCE_URL}/api/now/table/sys_scope"
+    url = f"{instance_url}/api/now/table/sys_scope"
     params = {
         'sysparm_limit': 50,
         'sysparm_fields': 'name,scope,version,sys_updated_on',
@@ -81,11 +82,11 @@ def get_applications():
         pass
     return []
 
-def get_recent_errors(limit=10):
+def get_recent_errors(instance_url, limit=10):
     """
     Fetches recent error logs from syslog.
     """
-    url = f"{INSTANCE_URL}/api/now/table/syslog"
+    url = f"{instance_url}/api/now/table/syslog"
     params = {
         'sysparm_limit': limit,
         'sysparm_fields': 'sys_created_on,source,message,sys_id',
@@ -104,7 +105,7 @@ def get_recent_errors(limit=10):
         pass
     return []
 
-def get_security_stats():
+def get_security_stats(instance_url):
     """
     Fetches security related stats.
     """
@@ -112,14 +113,14 @@ def get_security_stats():
     stats = {"failed_logins": 0, "new_admins": 0}
 
     # 1. Failed Logins Today (sysevent)
-    url_events = f"{INSTANCE_URL}/api/now/stats/sysevent"
+    url_events = f"{instance_url}/api/now/stats/sysevent"
     params_events = {
         'sysparm_count': 'true',
         'sysparm_query': 'name=login.failed^sys_created_onONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()'
     }
     
     # 2. New Admin Roles Granted Today (sys_user_has_role)
-    url_roles = f"{INSTANCE_URL}/api/now/stats/sys_user_has_role"
+    url_roles = f"{instance_url}/api/now/stats/sys_user_has_role"
     params_roles = {
         'sysparm_count': 'true',
         'sysparm_query': 'role.name=admin^sys_created_onONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()'
@@ -141,7 +142,7 @@ def get_security_stats():
         
     return stats
 
-def get_integration_health():
+def get_integration_health(instance_url):
     """
     Fetches integration health (ECC Queue).
     """
@@ -149,7 +150,7 @@ def get_integration_health():
     stats = {"ecc_errors": 0}
 
     # ECC Queue Errors Today
-    url = f"{INSTANCE_URL}/api/now/stats/ecc_queue"
+    url = f"{instance_url}/api/now/stats/ecc_queue"
     params = {
         'sysparm_count': 'true',
         'sysparm_query': 'state=error^sys_created_onONToday@javascript:gs.beginningOfToday()@javascript:gs.endOfToday()'
@@ -167,6 +168,7 @@ def get_integration_health():
 class ServiceNowQueryTool(BaseTool):
     name: str = "ServiceNow Table Query"
     description: str = "Queries any ServiceNow table. Useful for finding records (Users, Incidents, Scripts, etc). Input should be a pipe-separated string: 'table_name|query_string'. Example: 'sys_user|active=true^nameLIKEAlice'"
+    instance_url: str = Field(..., description="The base URL of the ServiceNow instance")
 
     def _run(self, input_str: str) -> str:
         try:
@@ -174,7 +176,7 @@ class ServiceNowQueryTool(BaseTool):
         except ValueError:
             return "Error: Input must be in format 'table_name|query_string'"
 
-        url = f"{INSTANCE_URL}/api/now/table/{table.strip()}"
+        url = f"{self.instance_url}/api/now/table/{table.strip()}"
         params = {
             'sysparm_query': query.strip(),
             'sysparm_limit': 5,
@@ -201,6 +203,7 @@ class ServiceNowQueryTool(BaseTool):
 class ServiceNowCreateTool(BaseTool):
     name: str = "ServiceNow Create Record"
     description: str = "Creates a new record in any ServiceNow table. Input should be a pipe-separated string: 'table_name|json_data'. Example: 'incident|{\"short_description\": \"Server outage\", \"urgency\": \"1\"}'"
+    instance_url: str = Field(..., description="The base URL of the ServiceNow instance")
 
     def _run(self, input_str: str) -> str:
         try:
@@ -211,7 +214,7 @@ class ServiceNowCreateTool(BaseTool):
         except json.JSONDecodeError:
             return "Error: Invalid JSON data provided."
 
-        url = f"{INSTANCE_URL}/api/now/table/{table.strip()}"
+        url = f"{self.instance_url}/api/now/table/{table.strip()}"
         
         try:
             response = requests.post(
@@ -231,6 +234,7 @@ class ServiceNowCreateTool(BaseTool):
 class ServiceNowUpdateTool(BaseTool):
     name: str = "ServiceNow Update Record"
     description: str = "Updates an existing record. Input should be a pipe-separated string: 'table_name|sys_id|json_data'. Example: 'incident|abc12345|{\"state\": \"2\"}'"
+    instance_url: str = Field(..., description="The base URL of the ServiceNow instance")
 
     def _run(self, input_str: str) -> str:
         try:
@@ -244,7 +248,7 @@ class ServiceNowUpdateTool(BaseTool):
         except json.JSONDecodeError:
             return "Error: Invalid JSON data provided."
 
-        url = f"{INSTANCE_URL}/api/now/table/{table.strip()}/{sys_id.strip()}"
+        url = f"{self.instance_url}/api/now/table/{table.strip()}/{sys_id.strip()}"
         
         try:
             response = requests.put(

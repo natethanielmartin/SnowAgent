@@ -7,7 +7,9 @@ from crewai.tools import BaseTool
 load_dotenv()
 
 # --- CONFIGURATION ---
-INSTANCE_URL = "https://dev309858.service-now.com"
+from pydantic import Field
+
+# --- CONFIGURATION ---
 USERNAME = os.getenv("SN_USERNAME")
 PASSWORD = os.getenv("SN_PASSWORD") 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
@@ -25,9 +27,10 @@ gemini_llm = LLM(
 class ServiceNowKnowledgeTool(BaseTool):
     name: str = "ServiceNow Knowledge Search"
     description: str = "Searches the ServiceNow Knowledge Base for technical articles."
+    instance_url: str = Field(..., description="The base URL of the ServiceNow instance")
 
     def _run(self, query: str) -> str:
-        url = f"{INSTANCE_URL}/api/now/table/kb_knowledge"
+        url = f"{self.instance_url}/api/now/table/kb_knowledge"
         params = {
             'sysparm_query': f'short_descriptionLIKE{query}^workflow_state=published',
             'sysparm_limit': 3, 
@@ -52,34 +55,38 @@ class ServiceNowKnowledgeTool(BaseTool):
         except Exception as e:
             return f"Connection Failed: {str(e)}"
 
-sn_tool = ServiceNowKnowledgeTool()
+# --- 2. FACTORY FOR AGENTS ---
+def get_agents(instance_url):
+    sn_tool = ServiceNowKnowledgeTool(instance_url=instance_url)
 
-# --- 2. DEFINE THE AGENTS ---
+    researcher = Agent(
+        role='ServiceNow Technical Researcher',
+        goal='Find accurate technical documentation on {topic}',
+        backstory='You are a specialist in navigating ServiceNow documentation.',
+        tools=[sn_tool],
+        llm=gemini_llm, 
+        verbose=True
+    )
 
-researcher = Agent(
-    role='ServiceNow Technical Researcher',
-    goal='Find accurate technical documentation on {topic}',
-    backstory='You are a specialist in navigating ServiceNow documentation.',
-    tools=[sn_tool],
-    llm=gemini_llm, 
-    verbose=True
-)
-
-interviewer = Agent(
-    role='Senior ServiceNow Architect',
-    goal='Quiz the user on {topic} based on retrieved documentation.',
-    backstory='You are a strict technical interviewer. You ask scenario-based questions.',
-    llm=gemini_llm, 
-    verbose=True
-)
+    interviewer = Agent(
+        role='Senior ServiceNow Architect',
+        goal='Quiz the user on {topic} based on retrieved documentation.',
+        backstory='You are a strict technical interviewer. You ask scenario-based questions.',
+        llm=gemini_llm, 
+        verbose=True
+    )
+    
+    return researcher, interviewer
 
 # --- 4. MODULAR FUNCTIONS FOR API ---
 
-def get_question_crew(topic):
+def get_question_crew(topic, instance_url):
     """
     Phase 1: Research the topic and generate an interview question.
     Returns: { "question": str, "context": str }
     """
+    researcher, interviewer = get_agents(instance_url)
+
     # Task 1: Research
     task_research = Task(
         description=f'Search the Knowledge Base for: {topic}. Summarize technical facts.',
@@ -102,16 +109,14 @@ def get_question_crew(topic):
     )
 
     result = crew.kickoff()
-    
-    # We need to extract the "Context" (Research) to pass to the next step.
-    # In a real app, we might store this in a DB. For now, we'll try to return the raw output.
-    # CrewAI returns the final task output by default.
     return str(result)
 
-def get_grading_crew(topic, question, answer):
+def get_grading_crew(topic, question, answer, instance_url):
     """
     Phase 2: Grade the user's answer.
     """
+    researcher, interviewer = get_agents(instance_url)
+
     # Task: Grade
     task_grade = Task(
         description=f"""

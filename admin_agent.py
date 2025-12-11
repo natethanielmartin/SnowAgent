@@ -16,32 +16,33 @@ gemini_llm = LLM(
     temperature=0.7
 )
 
-# --- TOOLS ---
-query_tool = ServiceNowQueryTool()
-create_tool = ServiceNowCreateTool()
-update_tool = ServiceNowUpdateTool()
+def get_agent(instance_url):
+    query_tool = ServiceNowQueryTool(instance_url=instance_url)
+    create_tool = ServiceNowCreateTool(instance_url=instance_url)
+    update_tool = ServiceNowUpdateTool(instance_url=instance_url)
 
-# --- AGENT ---
-admin_agent = Agent(
-    role='ServiceNow System Administrator',
-    goal='Execute administrative tasks in ServiceNow based on user requests.',
-    backstory="""You are an expert ServiceNow Administrator. 
-    You know the internal table names (e.g., 'sys_user', 'incident', 'sys_script_client', 'sys_scope').
-    You are careful when creating or updating records.
-    You always verify table names before acting.""",
-    tools=[query_tool, create_tool, update_tool],
-    llm=gemini_llm,
-    verbose=True
-)
+    return Agent(
+        role='ServiceNow System Administrator',
+        goal='Execute administrative tasks in ServiceNow based on user requests.',
+        backstory="""You are an expert ServiceNow Administrator. 
+        You know the internal table names (e.g., 'sys_user', 'incident', 'sys_script_client', 'sys_scope').
+        You are careful when creating or updating records.
+        You always verify table names before acting.""",
+        tools=[query_tool, create_tool, update_tool],
+        llm=gemini_llm,
+        verbose=True
+    )
 
 # --- FUNCTION FOR API ---
-def run_admin_command(user_request, history=[]):
+def run_admin_command(user_request, instance_url, history=[]):
     # Format history for the agent
     history_str = ""
     for msg in history:
         role = msg.get('role', 'user')
         content = msg.get('content', '')
         history_str += f"{role.upper()}: {content}\n"
+
+    agent = get_agent(instance_url)
 
     task_admin = Task(
         description=f"""
@@ -61,11 +62,11 @@ def run_admin_command(user_request, history=[]):
         If creating a record, generate realistic dummy data for required fields ONLY if the user hasn't specified them.
         """,
         expected_output='If asking a question: The question text. If executing an action: A summary of the action and result.',
-        agent=admin_agent
+        agent=agent
     )
 
     crew = Crew(
-        agents=[admin_agent],
+        agents=[agent],
         tasks=[task_admin],
         process=Process.sequential,
         verbose=True
@@ -74,7 +75,9 @@ def run_admin_command(user_request, history=[]):
     result = crew.kickoff()
     return str(result)
 
-def analyze_error_log(error_message):
+def analyze_error_log(error_message, instance_url):
+    agent = get_agent(instance_url)
+
     task_analysis = Task(
         description=f"""
         Analyze the following ServiceNow Error Log:
@@ -85,11 +88,11 @@ def analyze_error_log(error_message):
         3. Provide a specific fix or troubleshooting step.
         """,
         expected_output='A concise analysis with a "Root Cause" and "Suggested Fix" section.',
-        agent=admin_agent
+        agent=agent
     )
 
     crew = Crew(
-        agents=[admin_agent],
+        agents=[agent],
         tasks=[task_analysis],
         process=Process.sequential,
         verbose=True

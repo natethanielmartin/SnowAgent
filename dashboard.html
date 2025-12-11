@@ -343,7 +343,14 @@
             <span>Aimless Agent</span>
         </div>
 
-        <div class="nav-item active" onclick="switchTab('study')">
+        <div style="padding: 10px;">
+            <label style="color: white; font-size: 12px;">ServiceNow URL:</label>
+            <input type="text" id="instance-url" placeholder="https://devXXXXX.service-now.com"
+                value="https://dev309858.service-now.com"
+                style="width: 90%; padding: 4px; border: 2px inset #fff; font-family: 'Tahoma'; font-size: 11px;">
+        </div>
+
+        <div class="menu-item active" onclick="switchTab('study')" id="tab-study">
             <i class="fa-solid fa-graduation-cap"></i>
             Study Buddy
         </div>
@@ -601,7 +608,7 @@
     </div>
 
     <script>
-        const API_URL = "http://127.0.0.1:5000";
+        const API_URL = "http://127.0.0.1:5001";
 
         // STATE
         let studyState = 'TOPIC'; // TOPIC, ANSWER
@@ -638,6 +645,9 @@
         }
 
         async function updateSeniorStats() {
+            const url = getInstanceUrl();
+            if (!url) return;
+
             document.getElementById('sec-failed-logins').innerText = "...";
             document.getElementById('sec-new-admins').innerText = "...";
             document.getElementById('int-ecc-errors').innerText = "...";
@@ -645,7 +655,7 @@
 
             try {
                 // Fetch Security Stats
-                const secRes = await fetch(`${API_URL}/security_stats`);
+                const secRes = await fetch(`${API_URL}/security_stats?instance_url=${encodeURIComponent(url)}`);
                 const secData = await secRes.json();
                 if (secData.error) throw new Error(secData.error);
 
@@ -653,7 +663,7 @@
                 document.getElementById('sec-new-admins').innerText = secData.new_admins;
 
                 // Fetch Integration Stats
-                const intRes = await fetch(`${API_URL}/integration_stats`);
+                const intRes = await fetch(`${API_URL}/integration_stats?instance_url=${encodeURIComponent(url)}`);
                 const intData = await intRes.json();
                 if (intData.error) throw new Error(intData.error);
 
@@ -675,11 +685,14 @@
         }
 
         async function updateErrors() {
+            const url = getInstanceUrl();
+            if (!url) return;
+
             const tbody = document.getElementById('errors-list');
             tbody.innerHTML = '<tr><td colspan="4" style="padding: 20px; text-align: center;">Loading...</td></tr>';
 
             try {
-                const res = await fetch(`${API_URL}/errors`);
+                const res = await fetch(`${API_URL}/errors?instance_url=${encodeURIComponent(url)}`);
                 const errors = await res.json();
 
                 if (errors.error) throw new Error(errors.error);
@@ -709,6 +722,9 @@
         }
 
         async function analyzeError(btn, message) {
+            const iUrl = getInstanceUrl();
+            if (!iUrl) return;
+
             const originalText = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
             btn.disabled = true;
@@ -717,7 +733,7 @@
                 const res = await fetch(`${API_URL}/analyze_error`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message })
+                    body: JSON.stringify({ message: message, instance_url: iUrl })
                 });
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
@@ -734,11 +750,14 @@
         }
 
         async function updateStats() {
+            const url = getInstanceUrl();
+            if (!url) return;
+
             const ids = ['stat-incidents', 'stat-users', 'stat-jobs', 'stat-p1', 'stat-unassigned', 'stat-changes', 'today-errors', 'today-updates', 'total-brs'];
             ids.forEach(id => document.getElementById(id).innerText = "...");
 
             try {
-                const res = await fetch(`${API_URL}/instance_stats`);
+                const res = await fetch(`${API_URL}/instance_stats?instance_url=${encodeURIComponent(url)}`);
                 const data = await res.json();
 
                 if (data.error) throw new Error(data.error);
@@ -771,6 +790,9 @@
             const text = input.value.trim();
             if (!text) return;
 
+            const iUrl = getInstanceUrl();
+            if (!iUrl) return;
+
             // Add User Message
             addMessage('study-chat', text, 'user');
             input.value = '';
@@ -787,7 +809,7 @@
                     const res = await fetch(`${API_URL}/start_interview`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ topic: currentTopic })
+                        body: JSON.stringify({ topic: currentTopic, instance_url: iUrl })
                     });
                     const data = await res.json();
 
@@ -808,7 +830,8 @@
                         body: JSON.stringify({
                             topic: currentTopic,
                             question: currentQuestion,
-                            answer: text
+                            answer: text,
+                            instance_url: iUrl
                         })
                     });
                     const data = await res.json();
