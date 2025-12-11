@@ -36,10 +36,15 @@ def get_instance_stats(instance_url):
             'sysparm_query': query
         }
         try:
-            res = requests.get(url, auth=(USERNAME, PASSWORD), headers=headers, params=params)
+            print(f"Fetching count for {table} from {url}...")
+            res = requests.get(url, auth=(USERNAME, PASSWORD), headers=headers, params=params, timeout=10)
             if res.status_code == 200:
+                print(f"Success: {table}")
                 return res.json().get('result', {}).get('stats', {}).get('count', 0)
-        except:
+            else:
+                print(f"Failed {table}: {res.status_code}")
+        except Exception as e:
+            print(f"Error {table}: {e}")
             pass
         return 0
 
@@ -74,11 +79,13 @@ def get_applications(instance_url):
             url, 
             auth=(USERNAME, PASSWORD), 
             headers={"Content-Type": "application/json"}, 
-            params=params
+            params=params,
+            timeout=10
         )
         if response.status_code == 200:
             return response.json().get('result', [])
-    except Exception:
+    except Exception as e:
+        print(f"App fetch error: {e}")
         pass
     return []
 
@@ -97,11 +104,13 @@ def get_recent_errors(instance_url, limit=10):
             url, 
             auth=(USERNAME, PASSWORD), 
             headers={"Content-Type": "application/json"}, 
-            params=params
+            params=params,
+            timeout=10
         )
         if response.status_code == 200:
             return response.json().get('result', [])
-    except Exception:
+    except Exception as e:
+        print(f"Error fetching errors: {e}")
         pass
     return []
 
@@ -128,16 +137,17 @@ def get_security_stats(instance_url):
 
     try:
         # Fetch Events
-        r1 = requests.get(url_events, auth=(USERNAME, PASSWORD), headers=headers, params=params_events)
+        r1 = requests.get(url_events, auth=(USERNAME, PASSWORD), headers=headers, params=params_events, timeout=10)
         if r1.status_code == 200:
             stats["failed_logins"] = r1.json().get('result', {}).get('stats', {}).get('count', 0)
         
         # Fetch Roles
-        r2 = requests.get(url_roles, auth=(USERNAME, PASSWORD), headers=headers, params=params_roles)
+        r2 = requests.get(url_roles, auth=(USERNAME, PASSWORD), headers=headers, params=params_roles, timeout=10)
         if r2.status_code == 200:
             stats["new_admins"] = r2.json().get('result', {}).get('stats', {}).get('count', 0)
 
-    except Exception:
+    except Exception as e:
+        print(f"Security stats error: {e}")
         pass
         
     return stats
@@ -157,10 +167,11 @@ def get_integration_health(instance_url):
     }
     
     try:
-        r = requests.get(url, auth=(USERNAME, PASSWORD), headers=headers, params=params)
+        r = requests.get(url, auth=(USERNAME, PASSWORD), headers=headers, params=params, timeout=10)
         if r.status_code == 200:
             stats["ecc_errors"] = r.json().get('result', {}).get('stats', {}).get('count', 0)
-    except Exception:
+    except Exception as e:
+        print(f"Integration stats error: {e}")
         pass
 
     return stats
@@ -264,3 +275,30 @@ class ServiceNowUpdateTool(BaseTool):
                 return f"Error: {response.status_code} - {response.text}"
         except Exception as e:
             return f"Connection Failed: {str(e)}"
+
+def check_connection(instance_url):
+    """
+    Simple check to verify connectivity and credentials.
+    Fetches the current user to validate auth.
+    """
+    url = f"{instance_url}/api/now/table/sys_user"
+    params = {
+        'sysparm_limit': 1,
+        'sysparm_fields': 'user_name'
+    }
+    try:
+        response = requests.get(
+            url, 
+            auth=(USERNAME, PASSWORD), 
+            headers={"Content-Type": "application/json"}, 
+            params=params,
+            timeout=10
+        )
+        if response.status_code == 200:
+            return {"status": "success", "message": "Successfully connected to ServiceNow!"}
+        elif response.status_code == 401:
+            return {"status": "error", "message": "Authentication Failed. Check SN_USERNAME/SN_PASSWORD in .env"}
+        else:
+            return {"status": "error", "message": f"ServiceNow returned status {response.status_code}"}
+    except Exception as e:
+        return {"status": "error", "message": f"Connection Failed: {str(e)}"}

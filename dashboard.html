@@ -309,6 +309,20 @@
             animation-delay: -0.16s;
         }
 
+        .status-badge.online {
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .status-badge.offline {
+            color: #ff4444;
+            text-shadow: 0 0 5px #ff4444;
+        }
+
+        .status-badge.checking {
+            color: #ffd700;
+        }
+
         @keyframes bounce {
 
             0%,
@@ -347,7 +361,15 @@
             <label style="color: white; font-size: 12px;">ServiceNow URL:</label>
             <input type="text" id="instance-url" placeholder="https://devXXXXX.service-now.com"
                 value="https://dev309858.service-now.com"
-                style="width: 90%; padding: 4px; border: 2px inset #fff; font-family: 'Tahoma'; font-size: 11px;">
+                style="width: 98%; padding: 4px; border: 2px inset #fff; font-family: 'Tahoma'; font-size: 11px;">
+
+            <div style="margin-top: 5px; display: flex; gap: 5px;">
+                <button onclick="testConnection()"
+                    style="flex: 1; font-family: 'Tahoma'; font-size: 10px; padding: 2px;">
+                    <i class="fa-solid fa-plug"></i> Test Connection
+                </button>
+            </div>
+            <div id="connection-status" style="margin-top: 5px; font-size: 10px; color: #fff; display: none;"></div>
         </div>
 
         <div class="menu-item active" onclick="switchTab('study')" id="tab-study">
@@ -378,8 +400,10 @@
                     <h1 id="page-title">Study Buddy</h1>
                     <p class="subtitle" id="page-subtitle">Master ServiceNow concepts with AI-powered quizzes.</p>
                 </div>
-                <div class="status-badge online">
-                    <i class="fa-solid fa-circle" style="font-size: 8px; margin-right: 5px;"></i> System Online
+                <div class="status-badge" id="system-status-badge">
+                    <i class="fa-solid fa-circle" style="font-size: 8px; margin-right: 5px;"
+                        id="system-status-icon"></i>
+                    <span id="system-status-text">System Status: Unknown</span>
                 </div>
             </div>
         </header>
@@ -608,7 +632,11 @@
     </div>
 
     <script>
-        const API_URL = "http://127.0.0.1:5001";
+        const API_URL = "http://localhost:5001";
+
+        function getInstanceUrl() {
+            return document.getElementById('instance-url').value;
+        }
 
         // STATE
         let studyState = 'TOPIC'; // TOPIC, ANSWER
@@ -753,6 +781,14 @@
             const url = getInstanceUrl();
             if (!url) return;
 
+            // Set Status to Checking
+            const badge = document.getElementById('system-status-badge');
+            const icon = document.getElementById('system-status-icon');
+            const statusText = document.getElementById('system-status-text');
+
+            badge.className = 'status-badge checking';
+            statusText.innerText = "Checking...";
+
             const ids = ['stat-incidents', 'stat-users', 'stat-jobs', 'stat-p1', 'stat-unassigned', 'stat-changes', 'today-errors', 'today-updates', 'total-brs'];
             ids.forEach(id => document.getElementById(id).innerText = "...");
 
@@ -761,6 +797,10 @@
                 const data = await res.json();
 
                 if (data.error) throw new Error(data.error);
+
+                // Update Status to Online
+                badge.className = 'status-badge online';
+                statusText.innerText = "System Online";
 
                 document.getElementById('stat-incidents').innerText = data.incidents;
                 document.getElementById('stat-users').innerText = data.users;
@@ -776,7 +816,69 @@
 
             } catch (e) {
                 console.error(e);
+
+                // Update Status to Offline
+                badge.className = 'status-badge offline';
+                statusText.innerText = "System Offline";
+
                 ids.forEach(id => document.getElementById(id).innerText = "Err");
+                alert("Connection Error: " + e.message + "\n\nMake sure server.py is running on port 5001.");
+            }
+        }
+
+        async function testConnection() {
+            const url = getInstanceUrl();
+            if (!url) return;
+
+            const statusEl = document.getElementById('connection-status');
+            const badge = document.getElementById('system-status-badge');
+            const statusText = document.getElementById('system-status-text');
+
+            statusEl.style.display = 'block';
+            statusEl.style.color = '#ffd700'; // Gold for loading
+            statusEl.innerText = "Testing...";
+
+            // Also set global status
+            badge.className = 'status-badge checking';
+            statusText.innerText = "Checking...";
+
+            try {
+                const res = await fetch(`${API_URL}/test_connection`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ instance_url: url })
+                });
+                const data = await res.json();
+
+                if (data.status === 'success') {
+                    statusEl.style.color = '#00ff00'; // Green
+                    statusEl.innerText = "✓ Connected";
+
+                    // Update Global Status
+                    badge.className = 'status-badge online';
+                    statusText.innerText = "System Online";
+
+                    alert(data.message);
+                } else {
+                    statusEl.style.color = '#ff4444'; // Red
+                    statusEl.innerText = "✕ Failed";
+
+                    // Update Global Status
+                    badge.className = 'status-badge offline';
+                    statusText.innerText = "System Offline";
+
+                    alert(data.message);
+                }
+
+            } catch (e) {
+                statusEl.style.color = '#ff4444'; // Red
+                statusEl.innerText = "✕ Network Error";
+
+                badge.className = 'status-badge offline';
+                statusText.innerText = "System Offline";
+
+                console.error(e);
+                alert("Network Error: Could not reach backend server at " + API_URL);
             }
         }
 

@@ -4,10 +4,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 from study_buddy import get_question_crew, get_grading_crew
-from servicenow_tools import get_instance_stats, get_applications, get_recent_errors, get_security_stats, get_integration_health
+from servicenow_tools import get_instance_stats, get_applications, get_recent_errors, get_security_stats, get_integration_health, check_connection
 from admin_agent import run_admin_command, analyze_error_log
 
 app = Flask(__name__)
+CORS(app)
 # ... (existing code) ...
 
 @app.route('/security_stats', methods=['GET'])
@@ -52,7 +53,7 @@ def analyze_error():
         return jsonify({"analysis": analysis})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-CORS(app)
+
 
 @app.route('/start_interview', methods=['POST'])
 def start_interview():
@@ -105,12 +106,27 @@ def admin_command():
 @app.route('/instance_stats', methods=['GET'])
 def instance_stats():
     url = request.args.get('instance_url')
+    print(f"Received instance_stats request for: {url}")
     if not url: return jsonify({"error": "Instance URL required"}), 400
     try:
+        print("Calling get_instance_stats...")
         stats = get_instance_stats(url)
+        print(f"get_instance_stats returned: {stats}")
         return jsonify(stats)
     except Exception as e:
+        print(f"instance_stats error: {e}")
         return jsonify({"error": str(e)}), 500
+
+@app.route('/test_connection', methods=['POST'])
+def test_connection():
+    data = request.json
+    url = data.get('instance_url')
+    if not url: return jsonify({"error": "Instance URL required"}), 400
+    
+    print(f"Testing connection to: {url}")
+    result = check_connection(url)
+    print(f"Connection result: {result}")
+    return jsonify(result)
 
 @app.route('/applications', methods=['GET'])
 def applications():
